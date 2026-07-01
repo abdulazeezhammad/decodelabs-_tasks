@@ -842,7 +842,7 @@ with col3:
         st.success("Thank you for your feedback!")
 
 st.write("---")
-st.caption("Calculated in adherence to orthodox Islamic jurisprudence matrices. Ramadan.")
+st.caption("Calculated in adherence to orthodox Islamic jurisprudence matrices.")
 
 # =====================================================================
 # SADAQAH JARIYAH / DONATION SECTION
