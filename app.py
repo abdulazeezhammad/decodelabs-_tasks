@@ -3,6 +3,9 @@ from fractions import Fraction
 import io
 import streamlit as st
 
+
+import streamlit as st
+
 # --- 1. Page Configuration ---
 st.set_page_config(
     page_title="Al-Fara'id Islamic Inheritance Engine",
@@ -11,6 +14,36 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
+# =====================================================================
+# 1. PAGE CONFIGURATION (MUST BE THE FIRST STREAMLIT COMMAND)
+# =====================================================================
+st.set_page_config(
+    page_title="Islamic Inheritance Calculator",
+    page_icon="🕌",
+    layout="wide"
+)
+# 2. HIDE DEVELOPER MENUS & GITHUB SOURCING
+hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    [data-testid="stActionButtonIcon"] {visibility: hidden;}
+    .viewerBadge_container__171of {display: none !important;}
+    </style>
+"""
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+# 3. INITIALIZE COUNTERS AT ZERO
+if "like_count" not in st.session_state:
+    st.session_state.like_count = 0
+if "love_count" not in st.session_state:
+    st.session_state.love_count = 0
+if "has_liked" not in st.session_state:
+    st.session_state.has_liked = False
+if "has_loved" not in st.session_state:
+    st.session_state.has_loved = False
 # --- 2. Constants and System Maps ---
 ALLOWED_HEIRS = [
     "husband", "wife", "son", "daughter", "father", "mother",
@@ -782,3 +815,31 @@ elif st.session_state.page_view == "result":
     if st.button(m["another"], type="secondary", use_container_width=True):
         st.session_state.page_view = "input"
         st.rerun()
+
+
+# =====================================================================
+# REACTION SECTION (PLACED AT THE BOTTOM OF THE APPLICATION)
+# =====================================================================
+st.write("---")
+st.markdown("### Did this tool help you? Leave a reaction!")
+
+col1, col2, col3 = st.columns([1, 1, 4])
+
+with col1:
+    if st.button(f"Like ({st.session_state.like_count})", disabled=st.session_state.has_liked, key="like_btn"):
+        st.session_state.like_count += 1
+        st.session_state.has_liked = True
+        st.rerun()
+
+with col2:
+    if st.button(f"Love ({st.session_state.love_count})", disabled=st.session_state.has_loved, key="love_btn"):
+        st.session_state.love_count += 1
+        st.session_state.has_loved = True
+        st.rerun()
+
+with col3:
+    if st.session_state.has_liked or st.session_state.has_loved:
+        st.success("Thank you for your feedback!")
+
+st.write("---")
+st.caption("Calculated in adherence to orthodox Islamic jurisprudence matrices. Ramadan.")
