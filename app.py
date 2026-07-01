@@ -823,17 +823,53 @@ elif st.session_state.page_view == "result":
 st.write("---")
 st.markdown("### Did this tool help you? Leave a reaction!")
 
+# ==========================================
+# 1. PERMANENT FILE STORAGE SETUP
+# ==========================================
+import os
+
+LIKE_FILE = "interaction_counts.txt"
+
+def load_counts():
+    if os.path.exists(LIKE_FILE):
+        try:
+            with open(LIKE_FILE, "r") as f:
+                lines = f.read().split(",")
+                return int(lines[0]), int(lines[1])
+        except:
+            return 0, 0
+    return 0, 0
+
+def save_counts(likes, loves):
+    with open(LIKE_FILE, "w") as f:
+        f.write(f"{likes},{loves}")
+
+# Initialize session state tracking for the current browser session
+if "has_liked" not in st.session_state:
+    st.session_state.has_liked = False
+if "has_loved" not in st.session_state:
+    st.session_state.has_loved = False
+
+# Load the permanent totals from the file
+permanent_likes, permanent_loves = load_counts()
+
+
+# ==========================================
+# 2. YOUR ORIGINAL BUTTON LAYOUT (UPDATED)
+# ==========================================
 col1, col2, col3 = st.columns([1, 1, 4])
 
 with col1:
-    if st.button(f"Like ({st.session_state.like_count})", disabled=st.session_state.has_liked, key="like_btn"):
-        st.session_state.like_count += 1
+    if st.button(f"Like ({permanent_likes})", disabled=st.session_state.has_liked, key="like_btn"):
+        permanent_likes += 1
+        save_counts(permanent_likes, permanent_loves) # Save permanently
         st.session_state.has_liked = True
         st.rerun()
 
 with col2:
-    if st.button(f"Love ({st.session_state.love_count})", disabled=st.session_state.has_loved, key="love_btn"):
-        st.session_state.love_count += 1
+    if st.button(f"Love ({permanent_loves})", disabled=st.session_state.has_loved, key="love_btn"):
+        permanent_loves += 1
+        save_counts(permanent_likes, permanent_loves) # Save permanently
         st.session_state.has_loved = True
         st.rerun()
 
