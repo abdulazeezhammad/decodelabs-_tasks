@@ -888,3 +888,49 @@ with st.container():
         • Receiver Name: **AbdulAzeez Hammad Omokunmi**
         """)
         st.caption("Donors abroad can use **Remitly**, **WorldRemit**, or **LemFi** to send funds straight to this OPay wallet. The apps handle currency conversion automatically.")
+
+import os
+
+# =========================================================================
+# PERMANENT INTERACTIVE COUNTER (Saves numbers to a text file)
+# =========================================================================
+
+LIKE_FILE = "interaction_counts.txt"
+
+def load_counts():
+    if os.path.exists(LIKE_FILE):
+        try:
+            with open(LIKE_FILE, "r") as f:
+                lines = f.read().split(",")
+                return int(lines[0]), int(lines[1])
+        except:
+            return 0, 0
+    return 0, 0
+
+def save_counts(likes, loves):
+    with open(LIKE_FILE, "w") as f:
+        f.write(f"{likes},{loves}")
+
+# Load the permanent counts from the file
+likes_count, loves_count = load_counts()
+
+st.write("---") 
+st.write("**Support the Project with a Reaction:**")
+
+# Create two clean columns for the interaction buttons
+col_btn1, col_btn2 = st.columns(2)
+
+with col_btn1:
+    if st.button(f"👍 Like ({likes_count})", key="like_btn"):
+        likes_count += 1
+        save_counts(likes_count, loves_count)
+        st.rerun()
+
+with col_btn2:
+    if st.button(f"❤️ Love ({loves_count})", key="love_btn"):
+        loves_count += 1
+        save_counts(likes_count, loves_count)
+        st.rerun()
+        
+
+
