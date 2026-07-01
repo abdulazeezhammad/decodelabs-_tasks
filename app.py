@@ -866,15 +866,25 @@ with st.container():
         </div>
     """, unsafe_allow_html=True)
 
-    # Create two columns to display your OPay details cleanly
-    col_bank1, col_bank2 = st.columns(2)
+    #     # Split layout into two columns
+    col_local, col_intl = st.columns(2)
+    
+    with col_local:
+        st.markdown("### 🇳🇬 Inside Nigeria")
+        st.write("**Direct Bank Transfer / OPay**")
+        st.info("""
+        • Bank Name: **OPay**
+        • Account Number: **9138080996**
+        • Account Name: **AbdulAzeez Hammad Omokunmi**
+        """)
+        st.caption("You can transfer directly using your local mobile banking app.")
 
-    with col_bank1:
-        st.metric(label="Bank Name", value="OPay")
-
-    with col_bank2:
-        # Replace 1234567890 with your actual OPay Account Number
-        st.metric(label="Account Number", value="9138080996")
-
-    st.caption("Account Name: AbdulAzeez Hammad Omokunmi")
-st.write("---")
+    with col_intl:
+        st.markdown("### 🌐 Outside Nigeria (USD / GBP / EUR)")
+        st.write("**International Remittance App**")
+        st.success("""
+        • Wallet Provider: **OPay**
+        • Wallet Number: **9138080996**
+        • Receiver Name: **AbdulAzeez Hammad Omokunmi**
+        """)
+        st.caption("Donors abroad can use **Remitly**, **WorldRemit**, or **LemFi** to send funds straight to this OPay wallet. The apps handle currency conversion automatically.")
