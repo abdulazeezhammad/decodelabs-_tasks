@@ -843,3 +843,38 @@ with col3:
 
 st.write("---")
 st.caption("Calculated in adherence to orthodox Islamic jurisprudence matrices. Ramadan.")
+
+# =====================================================================
+# SADAQAH JARIYAH / DONATION SECTION
+# =====================================================================
+st.write("---")
+with st.container():
+    # Use standard markdown container styling for a professional layout
+    st.markdown("""
+        <div style="
+            background-color: #f4f6f9; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #1e7e34;
+            margin-top: 20px;">
+            <h3 style="color: #1e7e34; margin-top: 0;">✨ Support as Sadaqah Jariyah</h3>
+            <p style="color: #333333; font-size: 15px;">
+                If this tool helped you or your family compute your estate shares accurately, 
+                please consider supporting its hosting costs and continuous maintenance. 
+                Any contribution is a form of continuous charity.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Create two columns to display your OPay details cleanly
+    col_bank1, col_bank2 = st.columns(2)
+
+    with col_bank1:
+        st.metric(label="Bank Name", value="OPay")
+
+    with col_bank2:
+        # Replace 1234567890 with your actual OPay Account Number
+        st.metric(label="Account Number", value="9138080996")
+
+    st.caption("Account Name: AbdulAzeez Hammad Omokunmi")
+st.write("---")
