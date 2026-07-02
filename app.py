@@ -82,7 +82,7 @@ LANG_MAP = {
         "son_of_paternal_brother": "Son of Paternal Brother", "full_paternal_uncle": "Full Paternal Uncle",
         "paternal_paternal_uncle": "Paternal Paternal Uncle",
         "son_of_full_paternal_uncle": "Son of Full Paternal Uncle",
-        "son_of_paternal_paternal_uncle": "Son of Paternal Paternal Uncle"
+        "son_of_paternal_paternal_uncle": "Son of Paternal Paternal Uncle",
         "muan_tajhiz": "Funeral Expenses (مؤن التجهيز)",
         "huquq": "Debts & Liabilities (الديون والحقوق)",
         "wasiyyah": "Valid Bequests (الوصية)",
