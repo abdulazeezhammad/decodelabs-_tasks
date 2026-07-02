@@ -4,6 +4,12 @@ import io
 import os
 import streamlit as st
 
+# Import ReportLab modules for a beautifully styled PDF layout
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
 # =====================================================================
 # 1. PAGE CONFIGURATION (MUST BE THE FIRST STREAMLIT COMMAND & ONLY ONCE)
 # =====================================================================
@@ -22,7 +28,7 @@ hide_menu_style = """
     header {visibility: hidden;}
     [data-testid="stActionButtonIcon"] {visibility: hidden;}
     .viewerBadge_container__171of {display: none !important;}
-    
+
     /* Global fixes for numeric input text and labels inside containers */
     div[data-testid="stMarkdownContainer"] p {
         color: #F3F4F6 !important;
@@ -78,7 +84,7 @@ LANG_MAP = {
         "pct_header": "Percentage",
         "basis_header": "Legal Basis / Fiqh Justification",
         "another": "← Calculate New Case",
-        "download_pdf": "📥 Download Report",
+        "download_pdf": "📥 Download Clean PDF Report",
         "case_summary": "💼 Case Summary Matrix",
         "husband": "Husband", "wife": "Wife", "son": "Son", "daughter": "Daughter", "father": "Father",
         "mother": "Mother",
@@ -112,7 +118,7 @@ LANG_MAP = {
         "pct_header": "النسبة المئوية",
         "basis_header": "السبب والتعليل الفقهي الشرعي",
         "another": "← حساب مسألة فقهية جديدة",
-        "download_pdf": "📥 تحميل التقرير",
+        "download_pdf": "📥 تحميل ملف PDF المنسق",
         "case_summary": "💼 ملخص المسألة المفتوحة",
         "husband": "الزوج", "wife": "الزوجة", "son": "الابن", "daughter": "البنت", "father": "الأب", "mother": "الأم",
         "son_of_son": "ابن الابن", "daughter_of_son": "بنت الابن", "grandfather": "الجد لأب",
@@ -445,7 +451,8 @@ class InheritanceEngine:
             self.h["wife"].justification_key = "wife_eighth" if has_any_desc else "wife_fourth"
 
         total_siblings = sum(self.h[k].count for k in ["full_brother", "full_sister", "paternal_brother",
-                                                       "paternal_sister", "maternal_brother", "maternal_sister"] if k in self.h)
+                                                       "paternal_sister", "maternal_brother", "maternal_sister"] if
+                             k in self.h)
         if "mother" in self.h:
             cond_mother = has_any_desc or total_siblings >= 2
             self.h["mother"].fractional_share = Fraction(1, 6) if cond_mother else Fraction(1, 3)
@@ -478,17 +485,22 @@ class InheritanceEngine:
 
         if "daughter" in self.h and "son" not in self.h:
             self.h["daughter"].fractional_share = Fraction(1, 2) if self.h["daughter"].count == 1 else Fraction(2, 3)
-            self.h["daughter"].justification_key = "daughter_half" if self.h["daughter"].count == 1 else "daughter_two_thirds"
+            self.h["daughter"].justification_key = "daughter_half" if self.h[
+                                                                          "daughter"].count == 1 else "daughter_two_thirds"
 
         if "daughter_of_son" in self.h and "son" not in self.h and "son_of_son" not in self.h:
             if "daughter" not in self.h:
-                self.h["daughter_of_son"].fractional_share = Fraction(1, 2) if self.h["daughter_of_son"].count == 1 else Fraction(2, 3)
-                self.h["daughter_of_son"].justification_key = "daughter_of_son_half" if self.h["daughter_of_son"].count == 1 else "daughter_of_son_two_thirds"
+                self.h["daughter_of_son"].fractional_share = Fraction(1, 2) if self.h[
+                                                                                   "daughter_of_son"].count == 1 else Fraction(
+                    2, 3)
+                self.h["daughter_of_son"].justification_key = "daughter_of_son_half" if self.h[
+                                                                                            "daughter_of_son"].count == 1 else "daughter_of_son_two_thirds"
             elif self.h["daughter"].count == 1:
                 self.h["daughter_of_son"].fractional_share = Fraction(1, 6)
                 self.h["daughter_of_son"].justification_key = "daughter_of_son_sixth"
 
-        ut_count = self.h.get("maternal_brother", Heir("x", 0)).count + self.h.get("maternal_sister", Heir("x", 0)).count
+        ut_count = self.h.get("maternal_brother", Heir("x", 0)).count + self.h.get("maternal_sister",
+                                                                                   Heir("x", 0)).count
         if ut_count > 0:
             share_per_ut = Fraction(1, 6) if ut_count == 1 else Fraction(1, 3) / ut_count
             key_ut = "uterine_siblings_sixth" if ut_count == 1 else "uterine_siblings_third"
@@ -501,14 +513,21 @@ class InheritanceEngine:
 
         if "full_sister" in self.h and "full_brother" not in self.h and not has_male_desc and hc.get("father", 0) == 0:
             if not has_female_desc:
-                self.h["full_sister"].fractional_share = Fraction(1, 2) if self.h["full_sister"].count == 1 else Fraction(2, 3)
-                self.h["full_sister"].justification_key = "full_sister_half" if self.h["full_sister"].count == 1 else "full_sister_two_thirds"
+                self.h["full_sister"].fractional_share = Fraction(1, 2) if self.h[
+                                                                               "full_sister"].count == 1 else Fraction(
+                    2, 3)
+                self.h["full_sister"].justification_key = "full_sister_half" if self.h[
+                                                                                    "full_sister"].count == 1 else "full_sister_two_thirds"
 
-        if "paternal_sister" in self.h and "paternal_brother" not in self.h and "full_brother" not in self.h and not has_male_desc and hc.get("father", 0) == 0:
+        if "paternal_sister" in self.h and "paternal_brother" not in self.h and "full_brother" not in self.h and not has_male_desc and hc.get(
+                "father", 0) == 0:
             if not has_female_desc:
                 if "full_sister" not in self.h:
-                    self.h["paternal_sister"].fractional_share = Fraction(1, 2) if self.h["paternal_sister"].count == 1 else Fraction(2, 3)
-                    self.h["paternal_sister"].justification_key = "paternal_sister_half" if self.h["paternal_sister"].count == 1 else "paternal_sister_two_thirds"
+                    self.h["paternal_sister"].fractional_share = Fraction(1, 2) if self.h[
+                                                                                       "paternal_sister"].count == 1 else Fraction(
+                        2, 3)
+                    self.h["paternal_sister"].justification_key = "paternal_sister_half" if self.h[
+                                                                                                "paternal_sister"].count == 1 else "paternal_sister_two_thirds"
                 elif self.h["full_sister"].count == 1:
                     self.h["paternal_sister"].fractional_share = Fraction(1, 6)
                     self.h["paternal_sister"].justification_key = "paternal_sister_sixth"
@@ -529,10 +548,12 @@ class InheritanceEngine:
 
             elif "son_of_son" in self.h:
                 total_parts = (self.h["son_of_son"].count * 2) + self.h.get("daughter_of_son", Heir("d", 0)).count
-                self.h["son_of_son"].fractional_share += remainder * Fraction(self.h["son_of_son"].count * 2, total_parts)
+                self.h["son_of_son"].fractional_share += remainder * Fraction(self.h["son_of_son"].count * 2,
+                                                                              total_parts)
                 self.h["son_of_son"].justification_key = "son_of_son_asabah"
                 if "daughter_of_son" in self.h:
-                    self.h["daughter_of_son"].fractional_share += remainder * Fraction(self.h["daughter_of_son"].count, total_parts)
+                    self.h["daughter_of_son"].fractional_share += remainder * Fraction(self.h["daughter_of_son"].count,
+                                                                                       total_parts)
                     self.h["daughter_of_son"].justification_key = "daughter_of_son_asabah"
                 remainder = Fraction(0, 1)
 
@@ -545,26 +566,33 @@ class InheritanceEngine:
                 self.h["grandfather"].justification_key = "grandfather_res"
                 remainder = Fraction(0, 1)
 
-            elif "full_brother" in self.h or ("full_sister" in self.h and (has_female_desc or "full_brother" in self.h)):
+            elif "full_brother" in self.h or (
+                    "full_sister" in self.h and (has_female_desc or "full_brother" in self.h)):
                 if "full_brother" in self.h:
                     total_parts = (self.h["full_brother"].count * 2) + self.h.get("full_sister", Heir("s", 0)).count
-                    self.h["full_brother"].fractional_share += remainder * Fraction(self.h["full_brother"].count * 2, total_parts)
+                    self.h["full_brother"].fractional_share += remainder * Fraction(self.h["full_brother"].count * 2,
+                                                                                    total_parts)
                     self.h["full_brother"].justification_key = "full_brother_asabah"
                     if "full_sister" in self.h:
-                        self.h["full_sister"].fractional_share += remainder * Fraction(self.h["full_sister"].count, total_parts)
+                        self.h["full_sister"].fractional_share += remainder * Fraction(self.h["full_sister"].count,
+                                                                                       total_parts)
                         self.h["full_sister"].justification_key = "full_sister_asabah_bi"
                 else:
                     self.h["full_sister"].fractional_share += remainder
                     self.h["full_sister"].justification_key = "full_sister_asabah_ma"
                 remainder = Fraction(0, 1)
 
-            elif "paternal_brother" in self.h or ("paternal_sister" in self.h and (has_female_desc or "paternal_brother" in self.h)):
+            elif "paternal_brother" in self.h or (
+                    "paternal_sister" in self.h and (has_female_desc or "paternal_brother" in self.h)):
                 if "paternal_brother" in self.h:
-                    total_parts = (self.h["paternal_brother"].count * 2) + self.h.get("paternal_sister", Heir("s", 0)).count
-                    self.h["paternal_brother"].fractional_share += remainder * Fraction(self.h["paternal_brother"].count * 2, total_parts)
+                    total_parts = (self.h["paternal_brother"].count * 2) + self.h.get("paternal_sister",
+                                                                                      Heir("s", 0)).count
+                    self.h["paternal_brother"].fractional_share += remainder * Fraction(
+                        self.h["paternal_brother"].count * 2, total_parts)
                     self.h["paternal_brother"].justification_key = "paternal_brother_asabah"
                     if "paternal_sister" in self.h:
-                        self.h["paternal_sister"].fractional_share += remainder * Fraction(self.h["paternal_sister"].count, total_parts)
+                        self.h["paternal_sister"].fractional_share += remainder * Fraction(
+                            self.h["paternal_sister"].count, total_parts)
                         self.h["paternal_sister"].justification_key = "paternal_sister_asabah_bi"
                 else:
                     self.h["paternal_sister"].fractional_share += remainder
@@ -603,29 +631,154 @@ class InheritanceEngine:
         return self.h
 
 
-def generate_pdf_report(engine, total_amount, currency_symbol, lang):
+def generate_decorated_pdf_report(engine, total_amount, currency_symbol, lang):
+    """
+    Generates a beautifully layout-decorated, clean corporate-grade table PDF using ReportLab flowables.
+    """
     buffer = io.BytesIO()
-    lines = []
-    lines.append("=" * 60)
-    lines.append("                AL-FARA'ID ISLAMIC INHERITANCE REPORT")
-    lines.append("=" * 60)
-    lines.append(f"Total Estate Assets Valuation: {currency_symbol} {total_amount:,.2f}")
-    lines.append("-" * 60)
-    lines.append(f"{'Heir Category (Count)':<30} | {'Share':<8} | {'Percentage':<10} | {'Cash Allocation':<15}")
-    lines.append("-" * 60)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40
+    )
 
+    styles = getSampleStyleSheet()
+
+    # Custom Brand Palette Elements
+    primary_color = colors.HexColor("#061810")  # Islamic Deep Green
+    accent_color = colors.HexColor("#1B4D3E")  # Emerald Highlight
+    text_dark = colors.HexColor("#2D3748")  # Charcoal Body Text
+
+    # Custom Document Typography Style Overrides
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        textColor=primary_color,
+        spaceAfter=6,
+        alignment=1  # Centered
+    )
+
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        textColor=colors.HexColor("#718096"),
+        spaceAfter=20,
+        alignment=1  # Centered
+    )
+
+    meta_style = ParagraphStyle(
+        'DocMeta',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        textColor=text_dark,
+        spaceAfter=15
+    )
+
+    cell_header_style = ParagraphStyle(
+        'CellHeader',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        textColor=colors.white,
+        alignment=0
+    )
+
+    cell_body_style = ParagraphStyle(
+        'CellBody',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9,
+        textColor=text_dark,
+        leading=12
+    )
+
+    cell_basis_style = ParagraphStyle(
+        'CellBasis',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=8.5,
+        textColor=colors.HexColor("#4A5568"),
+        leading=11
+    )
+
+    story = []
+
+    # Header Section
+    story.append(Paragraph("AL-FARA'ID ISLAMIC INHERITANCE SYSTEM", title_style))
+    story.append(Paragraph("Verified Judicial Distribution Ledger • Legal Compliance Report", subtitle_style))
+    story.append(Spacer(1, 10))
+
+    # Meta Estate Metrics Block
+    estate_text = f"<b>Net Distributable Estate Assets Valuation:</b> {currency_symbol} {total_amount:,.2f}"
+    story.append(Paragraph(estate_text, meta_style))
+    story.append(Spacer(1, 10))
+
+    # Table Headings Mapping
+    m_lang = LANG_MAP[lang]
+    table_data = [[
+        Paragraph(f"<b>{m_lang['heir_header']}</b>", cell_header_style),
+        Paragraph(f"<b>{m_lang['share_header']}</b>", cell_header_style),
+        Paragraph(f"<b>{m_lang['pct_header']}</b>", cell_header_style),
+        Paragraph(f"<b>Value Allocation</b>", cell_header_style),
+        Paragraph(f"<b>{m_lang['basis_header']}</b>", cell_header_style)
+    ]]
+
+    # Populate Structural Data Matrix Elements
     for k, h in engine.h.items():
-        heir_label = LANG_MAP[lang].get(k, k)
+        heir_label = f"{m_lang.get(k, k)} (x{h.count})"
         pct = float(h.fractional_share) * 100
-        line_item = f"{heir_label + ' (x' + str(h.count) + ')':<30} | {str(h.fractional_share):<8} | {pct:.2f}% {' ':<6} | {currency_symbol} {h.individual_cash:,.2f}"
-        lines.append(line_item)
+        cash_val = f"{currency_symbol} {h.individual_cash:,.2f}"
         basis_txt = التعليلات_والشروط[lang].get(h.justification_key, التعليلات_والشروط[lang]["default"])
-        lines.append(f"   ↳ Fiqh Basis: {basis_txt}")
-        lines.append("-" * 50)
 
-    lines.append("=" * 60)
-    final_text = "\n".join(lines)
-    buffer.write(final_text.encode("utf-8"))
+        table_data.append([
+            Paragraph(heir_label, cell_body_style),
+            Paragraph(str(h.fractional_share), cell_body_style),
+            Paragraph(f"{pct:.2f}%", cell_body_style),
+            Paragraph(cash_val, cell_body_style),
+            Paragraph(basis_txt, cell_basis_style)
+        ])
+
+    # Layout and Explicit Width Configuration Matrix
+    # Available width budget: 612 (Letter width) - 80 (margins) = 532
+    col_widths = [110, 50, 55, 95, 222]
+
+    res_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+
+    # Apply Visual Board Style Decorators
+    res_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), primary_color),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F7FAFC")]),
+        ('LINEBELOW', (0, 0), (-1, 0), 1.5, accent_color),
+    ]))
+
+    story.append(res_table)
+    story.append(Spacer(1, 30))
+
+    # Footnote Footer
+    footer_style = ParagraphStyle(
+        'DocFooter',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        textColor=colors.HexColor("#A0AEC0"),
+        alignment=1
+    )
+    story.append(Paragraph("Calculated accurately via orthodox Islamic jurisprudential matrices. Verified Document.",
+                           footer_style))
+
+    doc.build(story)
     buffer.seek(0)
     return buffer
 
@@ -639,7 +792,7 @@ if st.session_state.page_view == "input":
     with st.container():
         st.markdown(f'<div class="card-container">', unsafe_allow_html=True)
         st.subheader(m["estate"])
-        
+
         fin_c1, fin_c2 = st.columns([1, 4])
         with fin_c1:
             currency = st.selectbox("Currency", ["₦ NGN", "$ USD", "€ EUR", "£ GBP", "SR SAR", "د.إ AED"],
@@ -647,11 +800,11 @@ if st.session_state.page_view == "input":
         with fin_c2:
             gross_estate = st.number_input("Gross Valuation Amount", min_value=0.0, step=100.0, value=0.0,
                                            label_visibility="collapsed")
-            
+
         st.write("---")
         st.markdown(f"#### {m['pre_dist_title']}")
         st.caption(m['pre_dist_caption'])
-        
+
         ded_c1, ded_c2, ded_c3 = st.columns(3)
         with ded_c1:
             tajhiz = st.number_input(m["muan_tajhiz"], min_value=0.0, step=50.0, value=0.0)
@@ -659,25 +812,27 @@ if st.session_state.page_view == "input":
             debts = st.number_input(m["huquq"], min_value=0.0, step=50.0, value=0.0)
         with ded_c3:
             wasiyyah_input = st.number_input(m["wasiyyah"], min_value=0.0, step=50.0, value=0.0)
-            
+
         pre_wasiyyah_estate = max(0.0, gross_estate - (tajhiz + debts))
         max_wasiyyah_allowed = pre_wasiyyah_estate / 3.0
-        
+
         if wasiyyah_input > max_wasiyyah_allowed:
-            st.warning(f"⚠️ Wasiyyah exceeds the legal 1/3 limit! Capped at: {currency.split()[-1]} {max_wasiyyah_allowed:,.2f}")
+            st.warning(
+                f"⚠️ Wasiyyah exceeds the legal 1/3 limit! Capped at: {currency.split()[-1]} {max_wasiyyah_allowed:,.2f}")
             wasiyyah = max_wasiyyah_allowed
         else:
             wasiyyah = wasiyyah_input
-            
+
         estate_amt = max(0.0, pre_wasiyyah_estate - wasiyyah)
-        
+
         if gross_estate > 0:
             st.info(f"📋 **{m['net_estate_msg']}:** {currency.split()[-1]} {estate_amt:,.2f}")
-            
+
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.write(f"### {m['sel_heir']}")
-    tab_labels = ["Primary Heirs / الأصول والفروع", "Siblings & Uncles / الإخوة والأعمام"] if lang_code == "en" else ["الأصول والفروع والزوجين", "الحواشي (الإخوة والأعمام)"]
+    tab_labels = ["Primary Heirs / الأصول والفروع", "Siblings & Uncles / الإخوة والأعمام"] if lang_code == "en" else [
+        "الأصول والفروع والزوجين", "الحواشي (الإخوة والأعمام)"]
     tab1, tab2 = st.tabs(tab_labels)
 
     with tab1:
@@ -750,12 +905,13 @@ elif st.session_state.page_view == "result":
     st.metric(label=m["case_summary"], value=f"{val:,.2f} {cur}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    pdf_file = generate_pdf_report(eng, val, cur, lang_code)
+    # Calling our newly designed ReportLab engine to compile the data cleanly
+    pdf_file = generate_decorated_pdf_report(eng, val, cur, lang_code)
     st.download_button(
         label=m["download_pdf"],
         data=pdf_file,
-        file_name=f"Faraid_Report_{int(time.time())}.txt",
-        mime="text/plain",
+        file_name=f"Faraid_Legal_Report_{int(time.time())}.pdf",
+        mime="application/pdf",
         use_container_width=True
     )
 
@@ -796,9 +952,11 @@ elif st.session_state.page_view == "result":
         st.markdown("### 📜 Structural Case Insight: The Gharawain Case (المسألة الغراوية)")
         with st.expander("Jurisprudential Analysis Breakdown / التحليل الفقهي الاستثنائي", expanded=True):
             if lang_code == "en":
-                st.markdown("**Historical Origins:** Precedents established by the second Caliph, Umar ibn al-Khattab (R) (Umariyyah).")
+                st.markdown(
+                    "**Historical Origins:** Precedents established by the second Caliph, Umar ibn al-Khattab (R) (Umariyyah).")
             else:
-                st.markdown("**التأصيل الفقهي للمسألة:** تُعرف بـ الغراويتين أو العُمريتين نسبةً لقضاء أمير المؤمنين عمر بن الخطاب رضي الله عنه.")
+                st.markdown(
+                    "**التأصيل الفقهي للمسألة:** تُعرف بـ الغراويتين أو العُمريتين نسبةً لقضاء أمير المؤمنين عمر بن الخطاب رضي الله عنه.")
 
     st.write("---")
     if st.button(m["another"], type="secondary", use_container_width=True):
@@ -813,6 +971,7 @@ st.markdown("### Did this tool help you? Leave a reaction!")
 
 LIKE_FILE = "interaction_counts.txt"
 
+
 def load_counts():
     if os.path.exists(LIKE_FILE):
         try:
@@ -823,23 +982,25 @@ def load_counts():
             return 0, 0
     return 0, 0
 
+
 def save_counts(likes, loves):
     with open(LIKE_FILE, "w") as f:
         f.write(f"{likes},{loves}")
+
 
 permanent_likes, permanent_loves = load_counts()
 
 col1, col2, col3 = st.columns([1, 1, 4])
 
 with col1:
-    if st.button(f"Like ({permanent_likes})", disabled=st.session_state.has_liked, key="like_btn"):
+    if st.button(f"👍 ({permanent_likes})", disabled=st.session_state.has_liked, key="like_btn"):
         permanent_likes += 1
         save_counts(permanent_likes, permanent_loves)
         st.session_state.has_liked = True
         st.rerun()
 
 with col2:
-    if st.button(f"Love ({permanent_loves})", disabled=st.session_state.has_loved, key="love_btn"):
+    if st.button(f"❤️ ({permanent_loves})", disabled=st.session_state.has_loved, key="love_btn"):
         permanent_loves += 1
         save_counts(permanent_likes, permanent_loves)
         st.session_state.has_loved = True
@@ -874,7 +1035,7 @@ with st.container():
     """, unsafe_allow_html=True)
 
     col_local, col_intl = st.columns(2)
-    
+
     with col_local:
         st.markdown("### 🇳🇬 Inside Nigeria")
         st.write("**Direct Bank Transfer / OPay**")
@@ -893,4 +1054,5 @@ with st.container():
         • Wallet Number: **9138080996**
         • Receiver Name: **AbdulAzeez Hammad Omokunmi**
         """)
-        st.caption("Donors abroad can use **Remitly**, **WorldRemit**, or **LemFi** to send funds straight to this OPay wallet. The apps handle currency conversion automatically.")
+        st.caption(
+            "Donors abroad can use **Remitly**, **WorldRemit**, or **LemFi** to send funds straight to this OPay wallet. The apps handle currency conversion automatically.")
