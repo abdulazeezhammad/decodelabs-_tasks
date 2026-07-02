@@ -694,53 +694,6 @@ with st.container():
                                     label_visibility="collapsed")
         with fin_c2:
             gross_estate = st.number_input("Gross Valuation Amount", min_value=0.0, step=100.0, value=0.0,
-                                         label_visibility="collapsed")
-            
-        st.write("---")
-        st.markdown("#### ⚖️ Pre-Distribution Liabilities / الحقوق المتعلقة بالتركة")
-        st.caption("These obligations take legal precedence and must be deducted from the gross estate before distributing fixed shares.")
-        
-        # Three clean columns for the legal deductions
-        ded_c1, ded_c2, ded_c3 = st.columns(3)
-        
-        with ded_c1:
-            tajhiz = st.number_input("Funeral Expenses (مؤن التجهيز)", min_value=0.0, step=50.0, value=0.0)
-        with ded_c2:
-            debts = st.number_input("Debts & Liabilities (الديون والحقوق)", min_value=0.0, step=50.0, value=0.0)
-        with ded_c3:
-            wasiyyah_input = st.number_input("Valid Bequests (الوصية)", min_value=0.0, step=50.0, value=0.0)
-            
-        # Calculate Remaining Net Estate
-        pre_wasiyyah_estate = max(0.0, gross_estate - (tajhiz + debts))
-        max_wasiyyah_allowed = pre_wasiyyah_estate / 3.0
-        
-        # Enforce the strict Shariah 1/3 limits on Wasiyyah
-        if wasiyyah_input > max_wasiyyah_allowed:
-            st.warning(f"⚠️ Wasiyyah exceeds the legal 1/3 limit! Capped at: {currency.split()[-1]} {max_wasiyyah_allowed:,.2f}")
-            wasiyyah = max_wasiyyah_allowed
-        else:
-            wasiyyah = wasiyyah_input
-            
-        estate_amt = max(0.0, pre_wasiyyah_estate - wasiyyah)
-        
-        # Dynamic visual output to keep user informed before hitting calculate
-        if gross_estate > 0:
-            st.info(f"📋 **Net Distributable Estate:** {currency.split()[-1]} {estate_amt:,.2f} *(Gross subtracted by total deductions)*")
-            
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.write(f"### {m['sel_heir']}")
-with st.container():
-        st.markdown(f'<div class="card-container">', unsafe_allow_html=True)
-        st.subheader(m["estate"])
-        
-        # Financial Input Base Split
-        fin_c1, fin_c2 = st.columns([1, 4])
-        with fin_c1:
-            currency = st.selectbox("Currency", ["₦ NGN", "$ USD", "€ EUR", "£ GBP", "SR SAR", "د.إ AED"],
-                                    label_visibility="collapsed")
-        with fin_c2:
-            gross_estate = st.number_input("Gross Valuation Amount", min_value=0.0, step=100.0, value=0.0,
                                            label_visibility="collapsed")
             
         st.write("---")
@@ -776,7 +729,7 @@ with st.container():
             
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # This line is now perfectly aligned back to 4 spaces!
+    # 4 spaces of indentation - perfectly aligned inside the outer page view block!
     st.write(f"### {m['sel_heir']}")
     tab_labels = ["Primary Heirs / الأصول والفروع", "Siblings & Uncles / الإخوة والأعمام"] if lang_code == "en" else [
         "الأصول والفروع والزوجين", "الحواشي (الإخوة والأعمام)"]
