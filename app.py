@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# 2. HIDE DEVELOPER MENUS & GITHUB SOURCING
+# 2. HIDE DEVELOPER MENUS & INJECT TEXT VISIBILITY OVERRIDES
 hide_menu_style = """
     <style>
     #MainMenu {visibility: hidden;}
@@ -22,6 +22,23 @@ hide_menu_style = """
     header {visibility: hidden;}
     [data-testid="stActionButtonIcon"] {visibility: hidden;}
     .viewerBadge_container__171of {display: none !important;}
+    
+    /* Global fixes for numeric input text and labels inside containers */
+    div[data-testid="stMarkdownContainer"] p {
+        color: #F3F4F6 !important;
+    }
+    label[data-testid="stWidgetLabel"] p {
+        color: #52B788 !important; /* Forces the titles like Wasiyyah, Debts to use theme green */
+        font-weight: 600 !important;
+    }
+    input[type="number"] {
+        color: #FFFFFF !important; /* Forces typed numbers to stay white */
+        background-color: #11151E !important; /* Dark slate background inside input box */
+    }
+    div[data-baseweb="input"] {
+        background-color: #11151E !important;
+        border: 1px solid #232D42 !important;
+    }
     </style>
 """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
@@ -215,6 +232,17 @@ if "heirs_state" not in st.session_state:
 # --- 4. Splashes and Loading Screens ---
 if not st.session_state.initial_splash_loaded:
     st.markdown("""
+        <div class="splash-canvas">
+            <div class="ring-wrapper">
+                <svg width="110" height="110">
+                    <circle cx="55" cy="55" r="48" stroke="#10251C" stroke-width="5" fill="transparent" />
+                    <circle class="progress-ring-circle" cx="55" cy="55" r="48" stroke-width="5" fill="transparent" />
+                </svg>
+                <div class="brand-diamond"></div>
+            </div>
+            <div class="splash-title">AL-FARA'ID</div>
+            <div class="splash-subtitle">Secure • Instant • Fiqh Engine</div>
+        </div>
         <style>
         [data-testid="stHeader"], footer {visibility: hidden;}
         .block-container {padding: 0rem; max-width: 100%;}
@@ -237,17 +265,6 @@ if not st.session_state.initial_splash_loaded:
         .splash-title { color: #FFFFFF; font-size: 26px; font-weight: 700; letter-spacing: 5px; margin: 5px 0; font-family: 'Inter', sans-serif; }
         .splash-subtitle { color: #94A3B8; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; font-family: 'Inter', sans-serif; }
         </style>
-        <div class="splash-canvas">
-            <div class="ring-wrapper">
-                <svg width="110" height="110">
-                    <circle cx="55" cy="55" r="48" stroke="#10251C" stroke-width="5" fill="transparent" />
-                    <circle class="progress-ring-circle" cx="55" cy="55" r="48" stroke-width="5" fill="transparent" />
-                </svg>
-                <div class="brand-diamond"></div>
-            </div>
-            <div class="splash-title">AL-FARA'ID</div>
-            <div class="splash-subtitle">Secure • Instant • Fiqh Engine</div>
-        </div>
     """, unsafe_allow_html=True)
     time.sleep(3.0)
     st.session_state.initial_splash_loaded = True
@@ -255,6 +272,17 @@ if not st.session_state.initial_splash_loaded:
 
 if st.session_state.calc_splash_trigger:
     st.markdown("""
+        <div class="splash-canvas">
+            <div class="ring-wrapper">
+                <svg width="110" height="110">
+                    <circle cx="55" cy="55" r="48" stroke="#1A221E" stroke-width="5" fill="transparent" />
+                    <circle class="progress-ring-circle" cx="55" cy="55" r="48" stroke-width="5" fill="transparent" />
+                </svg>
+                <div class="brand-diamond"></div>
+            </div>
+            <div class="splash-title">RUNNING MATRIX CALCULATIONS</div>
+            <div class="splash-subtitle">Applying Asabah & Fard Rules...</div>
+        </div>
         <style>
         [data-testid="stHeader"], footer {visibility: hidden;}
         .block-container {padding: 0rem; max-width: 100%;}
@@ -277,17 +305,6 @@ if st.session_state.calc_splash_trigger:
         .splash-title { color: #FFFFFF; font-size: 24px; font-weight: 700; letter-spacing: 4px; margin: 8px 0; font-family: 'Inter', sans-serif; }
         .splash-subtitle { color: #A3B19B; font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; font-family: 'Inter', sans-serif; }
         </style>
-        <div class="splash-canvas">
-            <div class="ring-wrapper">
-                <svg width="110" height="110">
-                    <circle cx="55" cy="55" r="48" stroke="#1A221E" stroke-width="5" fill="transparent" />
-                    <circle class="progress-ring-circle" cx="55" cy="55" r="48" stroke-width="5" fill="transparent" />
-                </svg>
-                <div class="brand-diamond"></div>
-            </div>
-            <div class="splash-title">RUNNING MATRIX CALCULATIONS</div>
-            <div class="splash-subtitle">Applying Asabah & Fard Rules...</div>
-        </div>
     """, unsafe_allow_html=True)
     time.sleep(2.0)
     st.session_state.calc_splash_trigger = False
@@ -350,26 +367,25 @@ class InheritanceEngine:
         self.case_meta = {"gharawain": False}
 
     def calculate(self):
-        # Local counts dictionary matching working state
         hc = {k: v for k, v in self.raw_counts.items() if v > 0}
 
         # 1. SPECIAL CASE METRICS: Gharawain (Umariyyah Check)
         if set(hc.keys()) == {"husband", "mother", "father"} and hc["husband"] == 1:
             self.h = {k: Heir(k, 1) for k in hc.keys()}
             self.h["husband"].fractional_share = Fraction(1, 2)
-            self.h["mother"].fractional_share = Fraction(1, 6)  # 1/3 of remainder (1/2)
-            self.h["father"].fractional_share = Fraction(1, 3)  # Asabah remainder
+            self.h["mother"].fractional_share = Fraction(1, 6)
+            self.h["father"].fractional_share = Fraction(1, 3)
             self.h["husband"].justification_key = "husband_half"
             self.h["mother"].justification_key = "umariyyah_mother"
-            self.h["father"].justification_key = "umariyy father"
+            self.h["father"].justification_key = "umariyyah_father"
             self.case_meta["gharawain"] = True
             return self._finalize()
 
         if set(hc.keys()) == {"wife", "mother", "father"}:
             self.h = {k: Heir(k, hc[k]) for k in hc.keys()}
             self.h["wife"].fractional_share = Fraction(1, 4)
-            self.h["mother"].fractional_share = Fraction(1, 4)  # 1/3 of remainder (3/4)
-            self.h["father"].fractional_share = Fraction(1, 2)  # Asabah remainder
+            self.h["mother"].fractional_share = Fraction(1, 4)
+            self.h["father"].fractional_share = Fraction(1, 2)
             self.h["wife"].justification_key = "wife_fourth"
             self.h["mother"].justification_key = "umariyyah_mother"
             self.h["father"].justification_key = "umariyyah_father"
