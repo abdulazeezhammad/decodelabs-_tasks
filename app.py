@@ -1,12 +1,12 @@
 import time
 from fractions import Fraction
 import io
+import os
 import streamlit as st
 
-
-import streamlit as st
-
-# --- 1. Page Configuration ---
+# =====================================================================
+# 1. PAGE CONFIGURATION (MUST BE THE FIRST STREAMLIT COMMAND & ONLY ONCE)
+# =====================================================================
 st.set_page_config(
     page_title="Al-Fara'id Islamic Inheritance Engine",
     page_icon="🕌",
@@ -14,15 +14,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-
-# =====================================================================
-# 1. PAGE CONFIGURATION (MUST BE THE FIRST STREAMLIT COMMAND)
-# =====================================================================
-st.set_page_config(
-    page_title="Islamic Inheritance Calculator",
-    page_icon="🕌",
-    layout="wide"
-)
 # 2. HIDE DEVELOPER MENUS & GITHUB SOURCING
 hide_menu_style = """
     <style>
@@ -44,6 +35,7 @@ if "has_liked" not in st.session_state:
     st.session_state.has_liked = False
 if "has_loved" not in st.session_state:
     st.session_state.has_loved = False
+
 # --- 2. Constants and System Maps ---
 ALLOWED_HEIRS = [
     "husband", "wife", "son", "daughter", "father", "mother",
@@ -369,7 +361,7 @@ class InheritanceEngine:
             self.h["father"].fractional_share = Fraction(1, 3)  # Asabah remainder
             self.h["husband"].justification_key = "husband_half"
             self.h["mother"].justification_key = "umariyyah_mother"
-            self.h["father"].justification_key = "umariyyah_father"
+            self.h["father"].justification_key = "umariyy father"
             self.case_meta["gharawain"] = True
             return self._finalize()
 
@@ -385,15 +377,10 @@ class InheritanceEngine:
             return self._finalize()
 
         # 2. FIQH TOTAL EXCLUSION RULES (HAJB AL-HIRMAN)
-        # Descendant exclusions
         if hc.get("son", 0) > 0:
             hc.pop("son_of_son", None)
             hc.pop("daughter_of_son", None)
-        if hc.get("son_of_son", 0) > 0 and hc.get("son", 0) == 0:
-            # lower descendants omitted for engine scope
-            pass
 
-        # Ascendant exclusions
         if hc.get("father", 0) > 0:
             hc.pop("grandfather", None)
             hc.pop("paternal_grandmother", None)
@@ -401,31 +388,25 @@ class InheritanceEngine:
             hc.pop("maternal_grandmother", None)
             hc.pop("paternal_grandmother", None)
 
-        # Siblings and Collateral exclusions
         has_male_desc = (hc.get("son", 0) > 0 or hc.get("son_of_son", 0) > 0)
         has_female_desc = (hc.get("daughter", 0) > 0 or hc.get("daughter_of_son", 0) > 0)
         has_any_desc = has_male_desc or has_female_desc
         has_male_asc = (hc.get("father", 0) > 0 or hc.get("grandfather", 0) > 0)
 
-        # Uterine Siblings are blocked by any descendent or male ascendant
         if has_any_desc or has_male_asc:
             hc.pop("maternal_brother", None)
             hc.pop("maternal_sister", None)
 
-        # Full Siblings are completely blocked by Father, Son, or Son of Son
         if hc.get("father", 0) > 0 or has_male_desc:
             hc.pop("full_brother", None)
             hc.pop("full_sister", None)
 
-        # Paternal Siblings are blocked by Father, Son, Son of Son, Full Brother
-        # Paternal Sister is also blocked by multiple Full Sisters unless there is a Paternal Brother
         if hc.get("father", 0) > 0 or has_male_desc or hc.get("full_brother", 0) > 0:
             hc.pop("paternal_brother", None)
             hc.pop("paternal_sister", None)
         if hc.get("full_sister", 0) >= 2 and hc.get("paternal_brother", 0) == 0:
             hc.pop("paternal_sister", None)
 
-        # Distant collaterals (nephews, uncles) blocked by any male sibling/father/son
         block_distant = (hc.get("father", 0) > 0 or has_male_desc or
                          hc.get("full_brother", 0) > 0 or hc.get("paternal_brother", 0) > 0 or
                          hc.get("grandfather", 0) > 0 or
@@ -437,11 +418,9 @@ class InheritanceEngine:
                       "paternal_paternal_uncle", "son_of_full_paternal_uncle", "son_of_paternal_paternal_uncle"]:
                 hc.pop(k, None)
 
-        # Reinitialize active working map
         self.h = {k: Heir(k, hc[k]) for k in hc.keys()}
 
         # 3. FIXED FRACTION ASSIGNMENTS (FARD)
-        # Spouses
         if "husband" in self.h:
             self.h["husband"].fractional_share = Fraction(1, 4) if has_any_desc else Fraction(1, 2)
             self.h["husband"].justification_key = "husband_fourth" if has_any_desc else "husband_half"
@@ -449,16 +428,13 @@ class InheritanceEngine:
             self.h["wife"].fractional_share = Fraction(1, 8) if has_any_desc else Fraction(1, 4)
             self.h["wife"].justification_key = "wife_eighth" if has_any_desc else "wife_fourth"
 
-        # Mother
         total_siblings = sum(self.h[k].count for k in ["full_brother", "full_sister", "paternal_brother",
-                                                       "paternal_sister", "maternal_brother", "maternal_sister"] if
-                             k in self.h)
+                                                       "paternal_sister", "maternal_brother", "maternal_sister"] if k in self.h)
         if "mother" in self.h:
             cond_mother = has_any_desc or total_siblings >= 2
             self.h["mother"].fractional_share = Fraction(1, 6) if cond_mother else Fraction(1, 3)
             self.h["mother"].justification_key = "mother_sixth" if cond_mother else "mother_third"
 
-        # Grandmothers
         if "maternal_grandmother" in self.h:
             self.h["maternal_grandmother"].fractional_share = Fraction(1, 6)
             self.h["maternal_grandmother"].justification_key = "maternal_grandmother_sixth"
@@ -469,7 +445,6 @@ class InheritanceEngine:
             self.h["maternal_grandmother"].fractional_share = Fraction(1, 12)
             self.h["paternal_grandmother"].fractional_share = Fraction(1, 12)
 
-        # Father & Paternal Grandfather Fard Base
         if "father" in self.h and has_male_desc:
             self.h["father"].fractional_share = Fraction(1, 6)
             self.h["father"].justification_key = "father_sixth"
@@ -485,26 +460,19 @@ class InheritanceEngine:
                 self.h["grandfather"].fractional_share = Fraction(1, 6)
                 self.h["grandfather"].justification_key = "grandfather_mix"
 
-        # Daughters & Granddaughters
         if "daughter" in self.h and "son" not in self.h:
             self.h["daughter"].fractional_share = Fraction(1, 2) if self.h["daughter"].count == 1 else Fraction(2, 3)
-            self.h["daughter"].justification_key = "daughter_half" if self.h[
-                                                                          "daughter"].count == 1 else "daughter_two_thirds"
+            self.h["daughter"].justification_key = "daughter_half" if self.h["daughter"].count == 1 else "daughter_two_thirds"
 
         if "daughter_of_son" in self.h and "son" not in self.h and "son_of_son" not in self.h:
             if "daughter" not in self.h:
-                self.h["daughter_of_son"].fractional_share = Fraction(1, 2) if self.h[
-                                                                                   "daughter_of_son"].count == 1 else Fraction(
-                    2, 3)
-                self.h["daughter_of_son"].justification_key = "daughter_of_son_half" if self.h[
-                                                                                            "daughter_of_son"].count == 1 else "daughter_of_son_two_thirds"
+                self.h["daughter_of_son"].fractional_share = Fraction(1, 2) if self.h["daughter_of_son"].count == 1 else Fraction(2, 3)
+                self.h["daughter_of_son"].justification_key = "daughter_of_son_half" if self.h["daughter_of_son"].count == 1 else "daughter_of_son_two_thirds"
             elif self.h["daughter"].count == 1:
-                self.h["daughter_of_son"].fractional_share = Fraction(1, 6)  # Takmilat al-Thuluthayn
+                self.h["daughter_of_son"].fractional_share = Fraction(1, 6)
                 self.h["daughter_of_son"].justification_key = "daughter_of_son_sixth"
 
-        # Uterine Siblings
-        ut_count = self.h.get("maternal_brother", Heir("x", 0)).count + self.h.get("maternal_sister",
-                                                                                   Heir("x", 0)).count
+        ut_count = self.h.get("maternal_brother", Heir("x", 0)).count + self.h.get("maternal_sister", Heir("x", 0)).count
         if ut_count > 0:
             share_per_ut = Fraction(1, 6) if ut_count == 1 else Fraction(1, 3) / ut_count
             key_ut = "uterine_siblings_sixth" if ut_count == 1 else "uterine_siblings_third"
@@ -515,27 +483,16 @@ class InheritanceEngine:
                 self.h["maternal_sister"].fractional_share = share_per_ut * self.h["maternal_sister"].count
                 self.h["maternal_sister"].justification_key = key_ut
 
-        # Female Collaterals (Sisters)
         if "full_sister" in self.h and "full_brother" not in self.h and not has_male_desc and hc.get("father", 0) == 0:
             if not has_female_desc:
-                self.h["full_sister"].fractional_share = Fraction(1, 2) if self.h[
-                                                                               "full_sister"].count == 1 else Fraction(
-                    2, 3)
-                self.h["full_sister"].justification_key = "full_sister_half" if self.h[
-                                                                                    "full_sister"].count == 1 else "full_sister_two_thirds"
-            else:
-                # Asabah Ma'a Ghayriha (Will be calculated below via residue)
-                pass
+                self.h["full_sister"].fractional_share = Fraction(1, 2) if self.h["full_sister"].count == 1 else Fraction(2, 3)
+                self.h["full_sister"].justification_key = "full_sister_half" if self.h["full_sister"].count == 1 else "full_sister_two_thirds"
 
-        if "paternal_sister" in self.h and "paternal_brother" not in self.h and "full_brother" not in self.h and not has_male_desc and hc.get(
-                "father", 0) == 0:
+        if "paternal_sister" in self.h and "paternal_brother" not in self.h and "full_brother" not in self.h and not has_male_desc and hc.get("father", 0) == 0:
             if not has_female_desc:
                 if "full_sister" not in self.h:
-                    self.h["paternal_sister"].fractional_share = Fraction(1, 2) if self.h[
-                                                                                       "paternal_sister"].count == 1 else Fraction(
-                        2, 3)
-                    self.h["paternal_sister"].justification_key = "paternal_sister_half" if self.h[
-                                                                                                "paternal_sister"].count == 1 else "paternal_sister_two_thirds"
+                    self.h["paternal_sister"].fractional_share = Fraction(1, 2) if self.h["paternal_sister"].count == 1 else Fraction(2, 3)
+                    self.h["paternal_sister"].justification_key = "paternal_sister_half" if self.h["paternal_sister"].count == 1 else "paternal_sister_two_thirds"
                 elif self.h["full_sister"].count == 1:
                     self.h["paternal_sister"].fractional_share = Fraction(1, 6)
                     self.h["paternal_sister"].justification_key = "paternal_sister_sixth"
@@ -545,7 +502,6 @@ class InheritanceEngine:
         remainder = Fraction(1, 1) - allocated_fard
 
         if remainder > 0:
-            # Class A: Direct Agnatic Descendants (Son & Daughter combo)
             if "son" in self.h:
                 total_parts = (self.h["son"].count * 2) + self.h.get("daughter", Heir("d", 0)).count
                 self.h["son"].fractional_share += remainder * Fraction(self.h["son"].count * 2, total_parts)
@@ -555,19 +511,15 @@ class InheritanceEngine:
                     self.h["daughter"].justification_key = "daughter_asabah"
                 remainder = Fraction(0, 1)
 
-            # Class B: Grandchildren combo
             elif "son_of_son" in self.h:
                 total_parts = (self.h["son_of_son"].count * 2) + self.h.get("daughter_of_son", Heir("d", 0)).count
-                self.h["son_of_son"].fractional_share += remainder * Fraction(self.h["son_of_son"].count * 2,
-                                                                              total_parts)
+                self.h["son_of_son"].fractional_share += remainder * Fraction(self.h["son_of_son"].count * 2, total_parts)
                 self.h["son_of_son"].justification_key = "son_of_son_asabah"
                 if "daughter_of_son" in self.h:
-                    self.h["daughter_of_son"].fractional_share += remainder * Fraction(self.h["daughter_of_son"].count,
-                                                                                       total_parts)
+                    self.h["daughter_of_son"].fractional_share += remainder * Fraction(self.h["daughter_of_son"].count, total_parts)
                     self.h["daughter_of_son"].justification_key = "daughter_of_son_asabah"
                 remainder = Fraction(0, 1)
 
-            # Class C: Fathers / Grandfathers taking remaining
             elif "father" in self.h and not has_male_desc:
                 self.h["father"].fractional_share += remainder
                 self.h["father"].justification_key = "father_res"
@@ -577,43 +529,32 @@ class InheritanceEngine:
                 self.h["grandfather"].justification_key = "grandfather_res"
                 remainder = Fraction(0, 1)
 
-            # Class D: Full Siblings / Asabah with Daughters
-            elif "full_brother" in self.h or (
-                    "full_sister" in self.h and (has_female_desc or "full_brother" in self.h)):
+            elif "full_brother" in self.h or ("full_sister" in self.h and (has_female_desc or "full_brother" in self.h)):
                 if "full_brother" in self.h:
                     total_parts = (self.h["full_brother"].count * 2) + self.h.get("full_sister", Heir("s", 0)).count
-                    self.h["full_brother"].fractional_share += remainder * Fraction(self.h["full_brother"].count * 2,
-                                                                                    total_parts)
+                    self.h["full_brother"].fractional_share += remainder * Fraction(self.h["full_brother"].count * 2, total_parts)
                     self.h["full_brother"].justification_key = "full_brother_asabah"
                     if "full_sister" in self.h:
-                        self.h["full_sister"].fractional_share += remainder * Fraction(self.h["full_sister"].count,
-                                                                                       total_parts)
+                        self.h["full_sister"].fractional_share += remainder * Fraction(self.h["full_sister"].count, total_parts)
                         self.h["full_sister"].justification_key = "full_sister_asabah_bi"
                 else:
-                    # Asabah Ma'a Ghayriha with daughters
                     self.h["full_sister"].fractional_share += remainder
                     self.h["full_sister"].justification_key = "full_sister_asabah_ma"
                 remainder = Fraction(0, 1)
 
-            # Class E: Paternal Siblings
-            elif "paternal_brother" in self.h or (
-                    "paternal_sister" in self.h and (has_female_desc or "paternal_brother" in self.h)):
+            elif "paternal_brother" in self.h or ("paternal_sister" in self.h and (has_female_desc or "paternal_brother" in self.h)):
                 if "paternal_brother" in self.h:
-                    total_parts = (self.h["paternal_brother"].count * 2) + self.h.get("paternal_sister",
-                                                                                      Heir("s", 0)).count
-                    self.h["paternal_brother"].fractional_share += remainder * Fraction(
-                        self.h["paternal_brother"].count * 2, total_parts)
+                    total_parts = (self.h["paternal_brother"].count * 2) + self.h.get("paternal_sister", Heir("s", 0)).count
+                    self.h["paternal_brother"].fractional_share += remainder * Fraction(self.h["paternal_brother"].count * 2, total_parts)
                     self.h["paternal_brother"].justification_key = "paternal_brother_asabah"
                     if "paternal_sister" in self.h:
-                        self.h["paternal_sister"].fractional_share += remainder * Fraction(
-                            self.h["paternal_sister"].count, total_parts)
+                        self.h["paternal_sister"].fractional_share += remainder * Fraction(self.h["paternal_sister"].count, total_parts)
                         self.h["paternal_sister"].justification_key = "paternal_sister_asabah_bi"
                 else:
                     self.h["paternal_sister"].fractional_share += remainder
                     self.h["paternal_sister"].justification_key = "paternal_sister_asabah_ma"
                 remainder = Fraction(0, 1)
 
-            # Class F: Cascading remaining agnates (Uncles/Nephews)
             else:
                 for k in ["son_of_full_brother", "son_of_paternal_brother", "full_paternal_uncle",
                           "paternal_paternal_uncle", "son_of_full_paternal_uncle", "son_of_paternal_paternal_uncle"]:
@@ -623,15 +564,11 @@ class InheritanceEngine:
                         remainder = Fraction(0, 1)
                         break
 
-        # 5. ANOMALY ADAPTATION MATRIX: AUL & RAD (عول ورد)
         total_shares = sum(x.fractional_share for x in self.h.values())
 
-        # Aul (Proportional reduction for crowded Fard shares over 1.0)
         if total_shares > 1:
             for x in self.h.values():
                 x.fractional_share /= total_shares
-
-        # Rad (Return of excess back to Fard heirs excluding Spouses)
         elif total_shares < 1:
             rad_heirs = [x for k, x in self.h.items() if k not in ["husband", "wife"] and x.fractional_share > 0]
             if rad_heirs:
@@ -683,11 +620,10 @@ if st.session_state.page_view == "input":
         f'<div class="hero-banner"><div class="hero-title-ar">المواريث والفرائض</div><div class="hero-title-en">{m["title"]}</div></div>',
         unsafe_allow_html=True)
 
-with st.container():
+    with st.container():
         st.markdown(f'<div class="card-container">', unsafe_allow_html=True)
         st.subheader(m["estate"])
         
-        # Financial Input Base Split
         fin_c1, fin_c2 = st.columns([1, 4])
         with fin_c1:
             currency = st.selectbox("Currency", ["₦ NGN", "$ USD", "€ EUR", "£ GBP", "SR SAR", "د.إ AED"],
@@ -700,9 +636,7 @@ with st.container():
         st.markdown(f"#### {m['pre_dist_title']}")
         st.caption(m['pre_dist_caption'])
         
-        # Three clean columns for the legal deductions
         ded_c1, ded_c2, ded_c3 = st.columns(3)
-        
         with ded_c1:
             tajhiz = st.number_input(m["muan_tajhiz"], min_value=0.0, step=50.0, value=0.0)
         with ded_c2:
@@ -710,11 +644,9 @@ with st.container():
         with ded_c3:
             wasiyyah_input = st.number_input(m["wasiyyah"], min_value=0.0, step=50.0, value=0.0)
             
-        # Calculate Remaining Net Estate
         pre_wasiyyah_estate = max(0.0, gross_estate - (tajhiz + debts))
         max_wasiyyah_allowed = pre_wasiyyah_estate / 3.0
         
-        # Enforce the strict Shariah 1/3 limits on Wasiyyah
         if wasiyyah_input > max_wasiyyah_allowed:
             st.warning(f"⚠️ Wasiyyah exceeds the legal 1/3 limit! Capped at: {currency.split()[-1]} {max_wasiyyah_allowed:,.2f}")
             wasiyyah = max_wasiyyah_allowed
@@ -723,16 +655,13 @@ with st.container():
             
         estate_amt = max(0.0, pre_wasiyyah_estate - wasiyyah)
         
-        # Dynamic visual output to keep user informed before hitting calculate
         if gross_estate > 0:
             st.info(f"📋 **{m['net_estate_msg']}:** {currency.split()[-1]} {estate_amt:,.2f}")
             
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 4 spaces of indentation - perfectly aligned inside the outer page view block!
     st.write(f"### {m['sel_heir']}")
-    tab_labels = ["Primary Heirs / الأصول والفروع", "Siblings & Uncles / الإخوة والأعمام"] if lang_code == "en" else [
-        "الأصول والفروع والزوجين", "الحواشي (الإخوة والأعمام)"]
+    tab_labels = ["Primary Heirs / الأصول والفروع", "Siblings & Uncles / الإخوة والأعمام"] if lang_code == "en" else ["الأصول والفروع والزوجين", "الحواشي (الإخوة والأعمام)"]
     tab1, tab2 = st.tabs(tab_labels)
 
     with tab1:
@@ -851,28 +780,20 @@ elif st.session_state.page_view == "result":
         st.markdown("### 📜 Structural Case Insight: The Gharawain Case (المسألة الغراوية)")
         with st.expander("Jurisprudential Analysis Breakdown / التحليل الفقهي الاستثنائي", expanded=True):
             if lang_code == "en":
-                st.markdown(
-                    "**Historical Origins:** Precedents established by the second Caliph, Umar ibn al-Khattab (R) (Umariyyah).")
+                st.markdown("**Historical Origins:** Precedents established by the second Caliph, Umar ibn al-Khattab (R) (Umariyyah).")
             else:
-                st.markdown(
-                    "**التأصيل الفقهي للمسألة:** تُعرف بـ الغراويتين أو العُمريتين نسبةً لقضاء أمير المؤمنين عمر بن الخطاب رضي الله عنه.")
+                st.markdown("**التأصيل الفقهي للمسألة:** تُعرف بـ الغراويتين أو العُمريتين نسبةً لقضاء أمير المؤمنين عمر بن الخطاب رضي الله عنه.")
 
     st.write("---")
     if st.button(m["another"], type="secondary", use_container_width=True):
         st.session_state.page_view = "input"
         st.rerun()
 
-
 # =====================================================================
 # REACTION SECTION (PLACED AT THE BOTTOM OF THE APPLICATION)
 # =====================================================================
 st.write("---")
 st.markdown("### Did this tool help you? Leave a reaction!")
-
-# ==========================================
-# 1. PERMANENT FILE STORAGE SETUP
-# ==========================================
-import os
 
 LIKE_FILE = "interaction_counts.txt"
 
@@ -890,32 +811,21 @@ def save_counts(likes, loves):
     with open(LIKE_FILE, "w") as f:
         f.write(f"{likes},{loves}")
 
-# Initialize session state tracking for the current browser session
-if "has_liked" not in st.session_state:
-    st.session_state.has_liked = False
-if "has_loved" not in st.session_state:
-    st.session_state.has_loved = False
-
-# Load the permanent totals from the file
 permanent_likes, permanent_loves = load_counts()
 
-
-# ==========================================
-# 2. YOUR ORIGINAL BUTTON LAYOUT (UPDATED)
-# ==========================================
 col1, col2, col3 = st.columns([1, 1, 4])
 
 with col1:
     if st.button(f"Like ({permanent_likes})", disabled=st.session_state.has_liked, key="like_btn"):
         permanent_likes += 1
-        save_counts(permanent_likes, permanent_loves) # Save permanently
+        save_counts(permanent_likes, permanent_loves)
         st.session_state.has_liked = True
         st.rerun()
 
 with col2:
     if st.button(f"Love ({permanent_loves})", disabled=st.session_state.has_loved, key="love_btn"):
         permanent_loves += 1
-        save_counts(permanent_likes, permanent_loves) # Save permanently
+        save_counts(permanent_likes, permanent_loves)
         st.session_state.has_loved = True
         st.rerun()
 
@@ -931,7 +841,6 @@ st.caption("Calculated in adherence to orthodox Islamic jurisprudence matrices."
 # =====================================================================
 st.write("---")
 with st.container():
-    # Use standard markdown container styling for a professional layout
     st.markdown("""
         <div style="
             background-color: #f4f6f9; 
@@ -948,7 +857,6 @@ with st.container():
         </div>
     """, unsafe_allow_html=True)
 
-    #     # Split layout into two columns
     col_local, col_intl = st.columns(2)
     
     with col_local:
@@ -970,7 +878,3 @@ with st.container():
         • Receiver Name: **AbdulAzeez Hammad Omokunmi**
         """)
         st.caption("Donors abroad can use **Remitly**, **WorldRemit**, or **LemFi** to send funds straight to this OPay wallet. The apps handle currency conversion automatically.")
-
-     
-
-
