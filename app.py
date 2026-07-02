@@ -683,7 +683,7 @@ if st.session_state.page_view == "input":
         f'<div class="hero-banner"><div class="hero-title-ar">المواريث والفرائض</div><div class="hero-title-en">{m["title"]}</div></div>',
         unsafe_allow_html=True)
 
-   with st.container():
+with st.container():
         st.markdown(f'<div class="card-container">', unsafe_allow_html=True)
         st.subheader(m["estate"])
         
