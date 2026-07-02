@@ -113,7 +113,7 @@ LANG_MAP = {
         "maternal_brother": "الأخ لأم", "maternal_sister": "الأخت لأم", "son_of_full_brother": "ابن الأخ الشقيق",
         "son_of_paternal_brother": "ابن الأخ لأب", "full_paternal_uncle": "العم الشقيق",
         "paternal_paternal_uncle": "العم لأب",
-        "son_of_full_paternal_uncle": "ابن العم الشقيق", "son_of_paternal_paternal_uncle": "ابن العم لأب"
+        "son_of_full_paternal_uncle": "ابن العم الشقيق", "son_of_paternal_paternal_uncle": "ابن العم لأب",
         "muan_tajhiz": "مؤن التجهيز",
         "huquq": "الديون والحقوق",
         "wasiyyah": "الوصية الشرعية",
