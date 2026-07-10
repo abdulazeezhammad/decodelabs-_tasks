@@ -1038,10 +1038,10 @@ with st.container():
 
     with col_local:
         st.markdown("### 🇳🇬 Inside Nigeria")
-        st.write("**Direct Bank Transfer / OPay**")
+        st.write("**Direct Bank Transfer / UNION BANK OF NIGERIA**")
         st.info("""
-        • Bank Name: **OPay**
-        • Account Number: **9138080996**
+        • Bank Name: **UNION BANK OF NIGERIA**
+        • Account Number: **0181679250**
         • Account Name: **AbdulAzeez Hammad Omokunmi**
         """)
         st.caption("You can transfer directly using your local mobile banking app.")
@@ -1050,8 +1050,8 @@ with st.container():
         st.markdown("### 🌐 Outside Nigeria (USD / GBP / EUR)")
         st.write("**International Remittance App**")
         st.success("""
-        • Wallet Provider: **OPay**
-        • Wallet Number: **9138080996**
+        • Wallet Provider: **UNION BANK OF NIGERIA**
+        • Wallet Number: **0181679250**
         • Receiver Name: **AbdulAzeez Hammad Omokunmi**
         """)
         st.caption(
