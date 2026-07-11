@@ -347,7 +347,7 @@ with sel_c2:
     lang_code = "ar" if lang_sel == "العربية" else "en"
     m = LANG_MAP[lang_code]
 
-if lang_code == "ar":
+if lang_code == "ar"
     st.markdown("<style>html, body, [data-testid='stAppViewContainer'] { direction: rtl; text-align: right; }</style>",
                 unsafe_allow_html=True)
 else:
